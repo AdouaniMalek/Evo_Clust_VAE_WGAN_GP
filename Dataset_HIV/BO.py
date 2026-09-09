@@ -27,7 +27,7 @@ import gc
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # %%
-dataset_directory = "C:/Users/Mega PC/Desktop/SF-GAN unsupervised/SF-GAN unsupervised/Dataset_1/"
+dataset_directory = "C:/Users/Malek Adouani/Desktop/Evo_Clust_VAE_WGAN_GP/Dataset_HIV/"
 df = pd.read_csv(dataset_directory + "preprocessed_HIV.csv")
 #df.head()
 trainData = df.to_numpy()

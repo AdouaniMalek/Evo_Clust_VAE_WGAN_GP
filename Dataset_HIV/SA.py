@@ -26,7 +26,7 @@ from Evaluation_metrics import compute_beta_recall, compute_alpha_precision
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # %%
-dataset_directory = "C:/Users/Malek Adouani/Desktop/CLUST_VAE_WGAN_GP_OPT_GIT-main/Dataset_1/"
+dataset_directory = "C:/Users/Malek Adouani/Desktop/Evo_Clust_VAE_WGAN_GP/Dataset_HIV/"
 df = pd.read_csv(dataset_directory + "preprocessed_HIV.csv")
 #df.head()
 trainData = df.to_numpy()

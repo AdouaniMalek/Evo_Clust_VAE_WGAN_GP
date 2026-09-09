@@ -32,7 +32,7 @@ else:
     device = torch.device('cpu')
 print(device)
 # %%
-dataset_directory = "C:/Users/Malek Adouani/Desktop/CLUST_VAE_WGAN_GP_OPT_GIT-main/Dataset_4/"
+dataset_directory = "C:/Users/Malek Adouani/Desktop/Evo_Clust_VAE_WGAN_GP/Dataset_Heart/"
 df = pd.read_csv(dataset_directory + "heart_failure_clinical_records_preprocessed.csv")
 #df.head()
 

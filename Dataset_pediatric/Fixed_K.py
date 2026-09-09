@@ -32,7 +32,7 @@ else:
 
 
 # %%
-dataset_directory = "C:/Users/Malek Adouani/Desktop/CLUST_VAE_WGAN_GP_OPT_GIT-main/Dataset_5/"
+dataset_directory = "C:/Users/Malek Adouani/Desktop/Evo_Clust_VAE_WGAN_GP/Dataset_pediatric/"
 df = pd.read_csv(dataset_directory + "Regensburg_Pediatric_Preprocessed.csv")
 numerical_features = df.select_dtypes(include=['int64', 'float64']).columns
 categorical_features = df.select_dtypes(include=['object', 'category']).columns

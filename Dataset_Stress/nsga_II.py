@@ -1,3 +1,4 @@
+# %%
 import numpy as np 
 import pandas as pd
 import torch
@@ -15,11 +16,9 @@ from sklearn.metrics import pairwise_distances_argmin_min
 from sklearn.cluster import KMeans
 from zcdp_accountant import compute_zcdp,get_privacy_spent
 from Evaluation_metrics import compute_dimensionwise_probability ,compute_mmd
-from Evaluation_metrics import silhouette_score, davies_bouldin_score
-import json
-from Evaluation_metrics import compute_epsilon_identifiability, compute_nndr, compute_cluster_statistical_parity
+from Evaluation_metrics import  silhouette_score, davies_bouldin_score
+from Evaluation_metrics import compute_epsilon_identifiability, compute_nndr
 from Evaluation_metrics import compute_beta_recall, compute_alpha_precision
-
 
 # %%
 if torch.cuda.is_available():
@@ -30,7 +29,7 @@ else:
 print(device)
 
 # %%
-dataset_directory = "C:/Users/Malek Adouani/Desktop/CLUST_VAE_WGAN_GP_OPT_GIT-main/Dataset_2/"
+dataset_directory = "C:/Users/Malek Adouani/Desktop/Config_Clust_VAE_WGAN_GP/Dataset_2/"
 df = pd.read_csv(dataset_directory + "corporate_stress_dataset_preprocessed.csv")
 #df.head()
 trainData = df.to_numpy(dtype="float32")
@@ -821,15 +820,19 @@ def load_models(generator, discriminator, fairness_critic, path, tag, device):
 
 
 # %%
-def fairness_objective(X_syn, cluster_labels_syn, sensitive_attrs_syn):
-    sp = compute_cluster_statistical_parity(
-    cluster_labels_syn,
-    sensitive_attrs_syn
-)
+def fairness_objective(X, cluster_labels, sensitive_attrs=None):
+    """
+    Post-hoc fairness proxy for UNSUPERVISED synthetic data.
+    No protected attributes are assumed available.
+    """
 
-    ss  = silhouette_score(X_syn, cluster_labels_syn)
-    dbi = davies_bouldin_score(X_syn, cluster_labels_syn)
-    return sp + dbi - ss
+    from sklearn.metrics import silhouette_score, davies_bouldin_score
+
+    ss = silhouette_score(X, cluster_labels)
+    dbi = davies_bouldin_score(X, cluster_labels)
+
+    # Lower is better (consistent with minimization)
+    return (1.0 - ss) + dbi
 
 def privacy_objective(real, synthetic):
     eps_risk = compute_epsilon_identifiability(real, synthetic)
@@ -870,231 +873,403 @@ def get_cluster_labels(clust_vae, X, device):
         cluster_labels = clust_vae.assign_clusters(z)
     return cluster_labels.cpu().numpy()
 
-# NSGA-II Multi-Objective Optimization
-from pymoo.core.problem import Problem
-from pymoo.algorithms.moo.nsga2 import NSGA2
-from pymoo.optimize import minimize
-from pymoo.termination import get_termination
-import logging
-import time
-import json
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s")
+# %%
+from pymoo.core.problem import Problem
+import torch
+import numpy as np
+from torch.utils.data import DataLoader
+import logging
+
+# -------------------------------------------------
+# Logging (minimal, paper-ready)
+# -------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(message)s"
+)
 logger = logging.getLogger("NSGA2-Clust_VAE_WGAN_GP")
 
 
 class GenerativeTradeoffProblem(Problem):
-    """
-    NSGA-II optimization problem for Cluster VAE + WGAN-GP.
-    
-    Decision variables:
-    - K: Number of clusters (5-20)
-    - lambda_gp: Gradient penalty weight (1.0-20.0)
-    - alpha_fair: Fairness weight (0.01-1.0)
-    - n_C: Cluster VAE epochs (5-30)
-    - n_G: Generator epochs (5-30)
-    
-    Objectives (minimize):
-    - Utility loss (maximize similarity to real data)
-    - Fairness loss (balanced cluster representation)
-    - Privacy loss (minimize identifiability risk)
-    """
 
-    def __init__(self, seed=42):
+    def __init__(self):
         super().__init__(
             n_var=5,
             n_obj=3,
             xl=[5, 1.0, 0.01, 5, 5],
             xu=[20, 20.0, 1.0, 30, 30]
         )
-        self.base_seed = seed
 
     def _evaluate(self, X, out, *args, **kwargs):
+
         F = []
-        eval_times = []
-        params_list = []
 
         for i, (K, lambda_gp, alpha_fair, n_C, n_G) in enumerate(X):
-            start_time = time.time()
-
-            seed_i = self.base_seed + i
-            torch.manual_seed(seed_i)
-            np.random.seed(seed_i)
-
-            K = int(K)
-            lambda_gp = float(lambda_gp)
-            alpha_fair = float(alpha_fair)
-            n_C = int(n_C)
-            n_G = int(n_G)
 
             logger.info(
-                f"[Eval {i}] K={K}, λ_gp={lambda_gp:.2f}, "
-                f"α_fair={alpha_fair:.3f}, n_C={n_C}, n_G={n_G}"
+                f"[Eval {i}] K={int(K)}, λ_gp={lambda_gp:.2f}, "
+                f"α_fair={alpha_fair:.3f}, n_C={int(n_C)}, n_G={int(n_G)}"
             )
 
-            try:
-                # Train Cluster VAE
-                clust_vae = train_clust_vae(
-                    dataloader=dataloader_train,
-                    feature_dim=feature_s,
-                    latent_dim=latent_dim,
-                    num_clusters=K,
-                    n_epochs=n_C,
-                    device=device
-                )
+            # -------------------------------------------------
+            # 1. Train ClustVAE on real data
+            # -------------------------------------------------
+            clust_vae = train_clust_vae(
+                dataloader=dataloader_train,
+                feature_dim=feature_s,
+                latent_dim=latent_dim,
+                num_clusters=int(K),
+                n_epochs=int(n_C),
+                device=device
+            )
 
-                # Get reconstructions and cluster labels
-                recon_real, _, cluster_labels_real = infer_with_clusters(
-                    clust_vae, dataloader_train, device
-                )
+            # -------------------------------------------------
+            # 2. Infer clusters on real data (for WGAN training)
+            # -------------------------------------------------
+            recon_real, _, cluster_labels_real = infer_with_clusters(
+                clust_vae,
+                dataloader_train,
+                device
+            )
 
-                # Train WGAN with Fairness
-                G = train_wgan_fair_wrapper(
-                    reconstructed_data=recon_real,
-                    protected_attributes=train_protected_attributes,
-                    num_clusters=K,
-                    lambda_gp=lambda_gp,
-                    alpha_fair=alpha_fair,
-                    n_epochs=n_G,
-                    device=device
-                )
+            # -------------------------------------------------
+            # 3. Train fairness-aware WGAN (fairness enforced HERE)
+            # -------------------------------------------------
+            G = train_wgan_fair_wrapper(
+                reconstructed_data=recon_real,
+                protected_attributes=train_protected_attributes,
+                num_clusters=int(K),
+                lambda_gp=lambda_gp,
+                alpha_fair=alpha_fair,
+                n_epochs=int(n_G),
+                device=device
+            )
 
-                # Generate synthetic samples
-                X_real = trainData.cpu().numpy() if torch.is_tensor(trainData) else trainData
-                X_syn = sample_generator(G, len(X_real), device)
+            # -------------------------------------------------
+            # 4. Generate synthetic data
+            # -------------------------------------------------
+            X_real = (
+                trainData.cpu().numpy()
+                if torch.is_tensor(trainData)
+                else trainData
+            )
 
-                # Get synthetic cluster labels
-                dataloader_syn = DataLoader(
-                    torch.tensor(X_syn, dtype=torch.float32),
-                    batch_size=64,
-                    num_workers=0
-                )
-                _, _, cluster_labels_syn = infer_with_clusters(
-                    clust_vae, dataloader_syn, device
-                )
-                cluster_labels_syn = np.asarray(cluster_labels_syn).ravel()
+            X_syn = sample_generator(G, len(X_real), device)
 
-                # Compute objectives
-                f_util = utility_objective(X_real, X_syn)
-                f_fair = fairness_objective(X_syn, cluster_labels_syn, sensitive_attrs=None)
-                f_priv = privacy_objective(X_real, X_syn)
+            # -------------------------------------------------
+            # 5. Infer cluster labels for synthetic data
+            # -------------------------------------------------
+            dataloader_syn = DataLoader(
+                torch.tensor(X_syn, dtype=torch.float32),
+                batch_size=64
+            )
 
-                # Validation check
-                if not np.isfinite(f_util) or not np.isfinite(f_fair) or not np.isfinite(f_priv):
-                    raise ValueError(
-                        f"NaN/Inf detected — util={f_util}, fair={f_fair}, priv={f_priv}"
-                    )
+            _, _, cluster_labels_syn = infer_with_clusters(
+                clust_vae,
+                dataloader_syn,
+                device
+            )
 
-                logger.info(
-                    f"[Result {i}] Utility={f_util:.4f} | "
-                    f"Fairness={f_fair:.4f} | Privacy={f_priv:.4f}"
-                )
-                F.append([f_util, f_fair, f_priv])
+            cluster_labels_syn = np.asarray(cluster_labels_syn).ravel()
 
-            except Exception as e:
-                logger.warning(f"[Eval {i}] Failed: {str(e)}", exc_info=True)
-                F.append([1e6, 1e6, 1e6])
+            # -------------------------------------------------
+            # 6. Objectives (NO synthetic sensitive attributes)
+            # -------------------------------------------------
+            f_util = utility_objective(X_real, X_syn)
 
-            eval_times.append(time.time() - start_time)
-            params_list.append({
-                "K": K, 
-                "lambda_gp": lambda_gp,
-                "alpha_fair": alpha_fair, 
-                "n_C": n_C, 
-                "n_G": n_G
-            })
+            # Fairness proxy = clustering structure only
+            # (fairness already enforced adversarially during training)
+            f_fair = fairness_objective(
+                X_syn,
+                cluster_labels_syn,
+                sensitive_attrs=None  # <- explicitly unused
+            )
 
-        F = np.asarray(F, dtype=np.float64)
+            f_priv = privacy_objective(X_real, X_syn)
 
-        # ✅ FIX 1: Do NOT normalize inside _evaluate
-        # Pass raw objectives; normalize in post-processing
-        out["F"] = F
-        out["eval_time"] = np.array(eval_times)
-        out["params"] = params_list
+            logger.info(
+                f"[Result {i}] Utility={f_util:.4f} | "
+                f"Fairness={f_fair:.4f} | Privacy={f_priv:.4f}"
+            )
+
+            F.append([f_util, f_fair, f_priv])
+
+        out["F"] = np.asarray(F)
 
 
 # %%
-# Run NSGA-II Optimization
-algorithm = NSGA2(pop_size=8)
-termination = get_termination("n_gen", 10)
+import random
+import time
+import numpy as np
+import pandas as pd
+import torch
 
-res = minimize(
-    GenerativeTradeoffProblem(seed=42),
-    algorithm,
-    termination,
-    seed=42,
-    verbose=True
+# IMPORTANT:
+# Restore F as torch.nn.functional.
+# Existing functions such as compute_cluster_labels()
+# currently call F.one_hot(...).
+import torch.nn.functional as F
+
+from pymoo.algorithms.moo.nsga2 import NSGA2
+from pymoo.optimize import minimize
+
+
+# ============================================================
+# Safety check for torch.nn.functional
+# ============================================================
+# This immediately catches any accidental reassignment of F
+# before starting the expensive 30-run experiment.
+assert hasattr(F, "one_hot"), (
+    "ERROR: F is no longer torch.nn.functional. "
+    "Do not use the variable name F for Pareto fronts."
 )
 
 
+# ============================================================
+# Reproducibility
+# ============================================================
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+
+# ============================================================
+# Experimental configuration
+# ============================================================
+
+N_RUNS = 30
+
+# Reduced NSGA-II budget
+POP_SIZE = 4
+N_EVALS = 12
+
+# Approximately:
+# 4 individuals × 3 generations = 12 evaluations/run
+#
+# Instead of:
+# 8 individuals × 10 generations ≈ 80 evaluations/run
+
+
+# ============================================================
+# Storage
+# ============================================================
+
+all_fronts = []
+all_results = []
+run_summary = []
+
+
+# ============================================================
+# 30 independent NSGA-II runs
+# ============================================================
+
+total_start = time.time()
+
+
+for run_seed in range(N_RUNS):
+
+    run_start = time.time()
+
+    print("\n" + "=" * 70)
+    print(
+        f"NSGA-II RUN {run_seed + 1}/{N_RUNS} | "
+        f"seed={run_seed}"
+    )
+    print("=" * 70)
+
+    # --------------------------------------------------------
+    # Defensive check
+    # --------------------------------------------------------
+    # Existing functions in the notebook use F.one_hot().
+    # Stop immediately if F has accidentally been overwritten.
+    if not hasattr(F, "one_hot"):
+        raise RuntimeError(
+            "F has been overwritten and is no longer "
+            "torch.nn.functional."
+        )
+
+    # --------------------------------------------------------
+    # Seed stochastic pipeline
+    # --------------------------------------------------------
+    set_seed(run_seed)
+
+    # --------------------------------------------------------
+    # Fresh NSGA-II instance
+    # --------------------------------------------------------
+    algorithm = NSGA2(
+        pop_size=POP_SIZE,
+        eliminate_duplicates=True
+    )
+
+    # --------------------------------------------------------
+    # Fresh problem instance
+    # --------------------------------------------------------
+    problem = GenerativeTradeoffProblem()
+
+    # --------------------------------------------------------
+    # Optimization
+    # --------------------------------------------------------
+    res = minimize(
+        problem,
+        algorithm,
+        termination=("n_eval", N_EVALS),
+        seed=run_seed,
+        verbose=False
+    )
+
+    # --------------------------------------------------------
+    # Pareto front
+    # --------------------------------------------------------
+    # IMPORTANT:
+    # Never write:
+    #
+    #     F = np.asarray(res.F)
+    #
+    # because F must remain torch.nn.functional.
+    # --------------------------------------------------------
+
+    pareto_front = np.asarray(res.F)
+
+    all_results.append(res)
+    all_fronts.append(pareto_front)
+
+    # --------------------------------------------------------
+    # Timing
+    # --------------------------------------------------------
+    run_seconds = time.time() - run_start
+    run_minutes = run_seconds / 60.0
+
+    n_evaluations = res.algorithm.evaluator.n_eval
+
+    # --------------------------------------------------------
+    # Store run information
+    # --------------------------------------------------------
+    run_summary.append({
+        "run": run_seed + 1,
+        "seed": run_seed,
+        "n_evaluations": n_evaluations,
+        "n_pareto_solutions": len(pareto_front),
+        "runtime_minutes": run_minutes
+    })
+
+    # --------------------------------------------------------
+    # Display run summary
+    # --------------------------------------------------------
+    print(
+        f"\nRun {run_seed + 1}/{N_RUNS} completed"
+        f"\nEvaluations          : {n_evaluations}"
+        f"\nPareto solutions     : {len(pareto_front)}"
+        f"\nRuntime              : {run_minutes:.2f} min"
+    )
+
+    # --------------------------------------------------------
+    # SAVE AFTER EVERY RUN
+    # --------------------------------------------------------
+    # Saving after every independent run prevents losing all
+    # completed results if a later run crashes.
+    # --------------------------------------------------------
+
+    np.save(
+        f"NSGAII_front_seed_{run_seed}.npy",
+        pareto_front
+    )
+
+    pd.DataFrame(run_summary).to_csv(
+        "NSGAII_30runs_summary.csv",
+        index=False
+    )
+
+    # --------------------------------------------------------
+    # GPU cleanup between runs
+    # --------------------------------------------------------
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+
+# ============================================================
+# Final summary
+# ============================================================
+
+total_hours = (time.time() - total_start) / 3600.0
+
+summary_df = pd.DataFrame(run_summary)
+
+
+print("\n" + "=" * 70)
+print("NSGA-II 30-RUN EXPERIMENT COMPLETED")
+print("=" * 70)
+
+print(summary_df)
+
+
+print(
+    f"\nMean runtime/run : "
+    f"{summary_df['runtime_minutes'].mean():.2f} min"
+)
+
+print(
+    f"Std runtime/run  : "
+    f"{summary_df['runtime_minutes'].std(ddof=1):.2f} min"
+)
+
+print(
+    f"Total runtime    : "
+    f"{total_hours:.2f} hours"
+)
+
+# %% [markdown]
+# 
+
 # %%
-# Post-Processing: Pareto Front Analysis
-def is_pareto_efficient(F):
-    """
-    Identify Pareto efficient solutions.
-    """
-    n_points = F.shape[0]
-    is_efficient = np.ones(n_points, dtype=bool)
-    for i in range(n_points):
-        if is_efficient[i]:
-            is_efficient[is_efficient] = (
-                np.any(F[is_efficient] < F[i], axis=1) |
-                np.all(F[is_efficient] == F[i], axis=1)
-            )
-            is_efficient[i] = True
-    return is_efficient
+from pymoo.indicators.hv import HV
+
+# -------------------------------------------------
+# Pool all Pareto fronts
+# -------------------------------------------------
+F_all = np.vstack(all_fronts)
+
+# Common normalization bounds
+ideal = F_all.min(axis=0)
+nadir = F_all.max(axis=0)
+
+denominator = nadir - ideal
+denominator[denominator == 0] = 1.0
 
 
-def save_results_json(res, filename="nsga2_results.json"):
-    """
-    ✅ FIX 1: Save results with normalization applied in post-processing.
-    """
-    F = np.array(res.F)
-    X = np.array(res.X)
+# Reference point in normalized objective space
+ref_point = np.array([1.1, 1.1, 1.1])
 
-    # Normalize objectives (now safe in post-processing)
-    f_min = F.min(axis=0)
-    f_max = F.max(axis=0)
-    denom = np.where(f_max - f_min == 0, 1e-12, f_max - f_min)
-    F_norm = (F - f_min) / denom
+hv_indicator = HV(ref_point=ref_point)
 
-    ref_point = (F_norm.max(axis=0) * 1.1).tolist()
-    pareto_mask = is_pareto_efficient(F_norm)
-
-    solutions = []
-    for i in range(len(F)):
-        x = X[i]
-        solutions.append({
-            "objectives": F[i].tolist(),
-            "objectives_normalized": F_norm[i].tolist(),
-            "is_pareto": bool(pareto_mask[i]),
-            "params": {
-                "K": int(x[0]),
-                "lambda_gp": float(x[1]),
-                "alpha_fair": float(x[2]),
-                "n_C": int(x[3]),
-                "n_G": int(x[4]),
-            },
-            "raw_params": x.tolist()
-        })
-
-    data = {
-        "n_solutions": len(solutions),
-        "n_objectives": F.shape[1],
-        "normalization": {
-            "f_min": f_min.tolist(), 
-            "f_max": f_max.tolist()
-        },
-        "reference_point": ref_point,
-        "solutions": solutions
-    }
-
-    with open(filename, "w") as f:
-        json.dump(data, f, indent=4)
-
-    print(f"✅ Saved results to {filename}")
-    return data
+hv_values = []
 
 
-# Save final results
-results_data = save_results_json(res)
+for run_id, F in enumerate(all_fronts):
+
+    # Normalize using COMMON bounds
+    F_normalized = (F - ideal) / denominator
+
+    hv = hv_indicator(F_normalized)
+
+    hv_values.append(hv)
+
+    print(
+        f"Run {run_id + 1:02d}: "
+        f"HV = {hv:.6f}"
+    )
+
+
+hv_values = np.array(hv_values)
+
+print("\nNSGA-II Hypervolume over 30 runs")
+print("--------------------------------")
+print(f"Mean HV : {hv_values.mean():.6f}")
+print(f"Std HV  : {hv_values.std(ddof=1):.6f}")
+print(f"Min HV  : {hv_values.min():.6f}")
+print(f"Max HV  : {hv_values.max():.6f}")

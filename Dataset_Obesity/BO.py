@@ -32,7 +32,7 @@ else:
 print(device)
 
 # %%
-dataset_directory = "C:/Users/Malek Adouani/Desktop/CLUST_VAE_WGAN_GP_OPT_GIT-main/Dataset_3/"
+dataset_directory = "C:/Users/Malek Adouani/Desktop/Evo_Clust_VAE_WGAN_GP/Dataset_Obesity/"
 df = pd.read_csv(dataset_directory + "preprocessed_obese_data.csv")
 #df.head()
 

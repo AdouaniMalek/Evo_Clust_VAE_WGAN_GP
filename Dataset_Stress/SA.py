@@ -31,7 +31,7 @@ else:
 print(device)
 
 # %%
-dataset_directory = "C:/Users/Malek Adouani/Desktop/CLUST_VAE_WGAN_GP_OPT_GIT-main/Dataset_2/"
+dataset_directory = "C:/Users/Malek Adouani/Desktop/Evo_Clust_VAE_WGAN_GP/Dataset_Stress/"
 df = pd.read_csv(dataset_directory + "corporate_stress_dataset_preprocessed.csv")
 #df.head()
 trainData = df.to_numpy(dtype="float32")

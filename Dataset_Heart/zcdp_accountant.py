@@ -5,7 +5,7 @@ def compute_zcdp(q, noise_multiplier, steps):
     Computes the zCDP (rho) for the Sampled Gaussian Mechanism.
 
     Args:
-        q (float): Sampling probability, generally batch_size / number_of_samples.
+        q (float): Sampling probability, batch_size / number_of_samples.
         noise_multiplier (float): Noise multiplier (sigma) for DP-SGD.
         steps (int): Number of iterations the mechanism is applied.
 
