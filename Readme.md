@@ -296,13 +296,6 @@ This repository documents the tri-objective configuration and landscape-characte
 
 Please cite the original model when using Clust-VAE-WGAN-GP and cite the evolutionary study when using its configuration-search framework or experimental protocol.
 
-### Methodological references
+## Acknowledgements
 
-- Kingma and Welling. [Auto-Encoding Variational Bayes](https://arxiv.org/abs/1312.6114).
-- Gulrajani et al. [Improved Training of Wasserstein GANs](https://arxiv.org/abs/1704.00028).
-- [pymoo: NSGA-II implementation and documentation](https://pymoo.org/algorithms/moo/nsga2.html).
-- [Optuna: Tree-structured Parzen Estimator sampler](https://optuna.readthedocs.io/en/stable/reference/samplers/generated/optuna.samplers.TPESampler.html).
-
-## Acknowledgement
-
-This work is supported by the European Union’s Horizon Europe Programme under the Marie Skłodowska-Curie Actions, Grant No. 101236749, the France 2030 programme (ANR-18-RHUS-0004; ANR-23-IAHU-0004), the iRECORDS project (JTC_2021), and the French Programme Investissement d’Avenir (I-SITE ULNE ANR-16-IDEX-0004; ARCHIE-INFINITE n°I-KUL-22-005), as well as Inserm and the French Ministry of Health (MESSIDORE 2023, IReSP AAP-2023-MSDR-341423).
+This work is supported by the European Union’s Horizon Europe Programme under the Marie Skłodowska-Curie Actions, Grant No. 101236749 (https://thunder-msca-se.univ-lille.fr/), the France 2030 programme (ANR-18-RHUS-0004; ANR-23-IAHU-0004), the iRECORDS project (JTC_2021), and the French Programme Investissement d’Avenir (I-SITE ULNE ANR-16-IDEX-0004; ARCHIE-INFINITE n°I-KUL-22-005), as well as Inserm and the French Ministry of Health (MESSIDORE 2023, IReSP AAP-2023-MSDR-341423).
