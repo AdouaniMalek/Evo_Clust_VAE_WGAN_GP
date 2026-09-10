@@ -2,6 +2,11 @@
 
 **Exploring utility–fairness–privacy trade-offs in synthetic tabular healthcare data through evolutionary configuration search.**
 
+![Evo-Clust-VAE-WGAN-GP architecture: NSGA-II configuration search around Clust-VAE and Fair-WGAN-GP](Figs/Evo_clust_vae_wgan_gp.png)
+
+*Figure 1. Overview of Evo-Clust-VAE-WGAN-GP. Each population member configures the Clust-VAE and Fair-WGAN-GP components. Generated records are evaluated through a three-objective fitness vector, and evolutionary selection produces successive populations and an approximate non-dominated solution set.*
+
+
 ## Objective
 
 **Evo-Clust-VAE-WGAN-GP aims to characterize the utility–fairness–privacy trade-off landscape of synthetic tabular healthcare data by jointly searching structural and training hyperparameters.** The configuration task is formulated as a tri-objective optimization problem across five healthcare benchmarks: **HIV, Stress, Obesity, Heart Failure, and Pediatric**.
@@ -31,14 +36,6 @@ Clust-VAE-WGAN-GP supplies the underlying generative architecture; **Evo-Clust-V
 | **Objective evaluation** | Measures the configured utility, fairness, and empirical privacy criteria for each candidate's generated data. |
 | **NSGA-II outer search** | Evolves configurations using non-dominated sorting, crowding distance, crossover, and mutation to retain alternative objective trade-offs. |
 
-### Architecture figure
-
-![Evo-Clust-VAE-WGAN-GP architecture: NSGA-II configuration search around Clust-VAE and Fair-WGAN-GP](Figs/Evo_clust_vae_wgan_gp.png)
-
-*Figure 1. Overview of Evo-Clust-VAE-WGAN-GP. Each population member configures the Clust-VAE and Fair-WGAN-GP components. Generated records are evaluated through a three-objective fitness vector, and evolutionary selection produces successive populations and an approximate non-dominated solution set.*
-
-
-The diagram orders its decision vector as `(K, n_C, n_G, lambda_gp, alpha_fair)`. The scripts unpack it as `(K, lambda_gp, alpha_fair, n_C, n_G)`; use the script order when passing numerical configurations. The figure's “Optimal Pareto Set” represents an **estimated non-dominated set**, since finite evolutionary search does not certify the full Pareto front.
 
 ## Research contributions and study design
 
