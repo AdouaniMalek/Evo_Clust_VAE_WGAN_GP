@@ -286,7 +286,18 @@ Malek Adouani and Zaineb Chelly Dagdia (2025). **Fair and Privacy-Preserving Syn
 **[HAL manuscript, version 1](https://hal.science/hal-05113907v1/document)** · **[Published chapter and citation](https://doi.org/10.1007/978-3-032-05962-8_12)**
 
 Please cite the original model when using Clust-VAE-WGAN-GP and cite the evolutionary study when using its configuration-search framework or experimental protocol.
-
+```bibtex
+@inproceedings{adouani:hal-05741386,
+  title     = {{Exploring Utility-Fairness-Privacy Trade-offs in Synthetic Sensitive Tabular Data}},
+  author    = {Adouani, Malek and Chelly Dagdia, Zaineb},
+  booktitle = {International Conference on Neural Information Processing},
+  address   = {Melbourne, Australia},
+  year      = {2026},
+  month     = nov,
+  url       = {https://hal.science/hal-05741386},
+  hal_id    = {hal-05741386}
+}
+```
 ## Acknowledgements
 
 This work is supported by the European Union’s Horizon Europe Programme under the Marie Skłodowska-Curie Actions, Grant No. 101236749 (https://thunder-msca-se.univ-lille.fr/), the France 2030 programme (ANR-18-RHUS-0004; ANR-23-IAHU-0004), the iRECORDS project (JTC_2021), and the French Programme Investissement d’Avenir (I-SITE ULNE ANR-16-IDEX-0004; ARCHIE-INFINITE n°I-KUL-22-005), as well as Inserm and the French Ministry of Health (MESSIDORE 2023, IReSP AAP-2023-MSDR-341423).
