@@ -285,12 +285,6 @@ Malek Adouani and Zaineb Chelly Dagdia (2025). **Fair and Privacy-Preserving Syn
 
 **[HAL manuscript, version 1](https://hal.science/hal-05113907v1/document)** · **[Published chapter and citation](https://doi.org/10.1007/978-3-032-05962-8_12)**
 
-### Evolutionary configuration study: Evo-Clust-VAE-WGAN-GP
-
-This repository documents the tri-objective configuration and landscape-characterization study built around the original generative model.
-
-**Publication record:** Add the evolutionary study's final title, full author list, venue, year, DOI, and public manuscript link when available. The base-model publication above is a separate work.
-
 Please cite the original model when using Clust-VAE-WGAN-GP and cite the evolutionary study when using its configuration-search framework or experimental protocol.
 
 ## Acknowledgements
