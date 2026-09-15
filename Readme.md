@@ -277,15 +277,8 @@ These notes describe the supplied code version and should be updated when the im
 
 A reproducible release should preserve the exact dataset version, preprocessing, objective definitions, actual evaluation counts, seeds, hardware/software environment, and configuration vectors. End-to-end execution has not been verified from the four scripts alone because the datasets and custom helper modules were not supplied.
 
-## Publications and citation
+## Publications and citation (to appear)
 
-### Original generative model: Clust-VAE-WGAN-GP
-
-Malek Adouani and Zaineb Chelly Dagdia (2025). **Fair and Privacy-Preserving Synthetic Data Generation via Clustering-Based Variational Autoencoder and Adversarially Debiased Wasserstein Generative Adversarial Networks with Gradient Penalty.** In *Machine Learning and Knowledge Discovery in Databases. Research Track*, ECML PKDD 2025, pp. 195–212.
-
-**[HAL manuscript, version 1](https://hal.science/hal-05113907v1/document)** · **[Published chapter and citation](https://doi.org/10.1007/978-3-032-05962-8_12)**
-
-Please cite the original model when using Clust-VAE-WGAN-GP and cite the evolutionary study when using its configuration-search framework or experimental protocol.
 ```bibtex
 @inproceedings{adouani:hal-05741386,
   title     = {{Exploring Utility-Fairness-Privacy Trade-offs in Synthetic Sensitive Tabular Data}},
@@ -294,8 +287,6 @@ Please cite the original model when using Clust-VAE-WGAN-GP and cite the evoluti
   address   = {Melbourne, Australia},
   year      = {2026},
   month     = nov,
-  url       = {https://hal.science/hal-05741386},
-  hal_id    = {hal-05741386}
 }
 ```
 ## Acknowledgements
