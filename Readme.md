@@ -281,7 +281,7 @@ A reproducible release should preserve the exact dataset version, preprocessing,
 *Malek Adouani, Zaineb Chelly Dagdia. Exploring Utility-Fairness-Privacy Trade-offs in Synthetic Sensitive Tabular Data. International Conference on Neural Information Processing (ICONIP 2026), Nov 2026, Melbourne, Australia. (to appear)*
 
 The open HAL publication summarizing this work is openly available on:
-📄 [Read the publication on HAL]
+📄 [Read the publication on HAL] 
 ## Acknowledgements
 
 This work is supported by the European Union’s Horizon Europe Programme under the Marie Skłodowska-Curie Actions, Grant No. 101236749 (https://thunder-msca-se.univ-lille.fr/), the France 2030 programme (ANR-18-RHUS-0004; ANR-23-IAHU-0004), the iRECORDS project (JTC_2021), and the French Programme Investissement d’Avenir (I-SITE ULNE ANR-16-IDEX-0004; ARCHIE-INFINITE n°I-KUL-22-005), as well as Inserm and the French Ministry of Health (MESSIDORE 2023, IReSP AAP-2023-MSDR-341423).
